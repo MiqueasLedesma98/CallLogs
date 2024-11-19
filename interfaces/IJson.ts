@@ -1,9 +1,9 @@
-interface IJSON {
-  phone: string;
-  logs: ILog[];
+export interface IJSON {
+  destino: number;
+  anexo: ILog[];
 }
 
-interface ILog {
+export interface ILog {
   date: string;
   duration: number;
   name?: string;

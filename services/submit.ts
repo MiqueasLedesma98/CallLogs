@@ -25,11 +25,11 @@ export const handleSubmit =
                   if (!config)
                     throw new Error('Falla al configurar el servicio');
 
-                  ReactNativeForegroundService.add_task(getCallLogs, {
+                  ReactNativeForegroundService.add_task(getCallLogs(), {
                     delay: config.delay * 1000 * 60,
                     onLoop: true,
                     taskId: 'taskid',
-                    onSuccess: () => {},
+                    onSuccess: () => console.log('Tarea ejecutada'),
                     // @ts-ignore
                     onError: e => console.log('Error logging:', e),
                   });

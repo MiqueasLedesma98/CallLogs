@@ -30,7 +30,7 @@ export default function App() {
   const handleHistory = async () => {
     try {
       setLoading(true);
-      await sendData();
+      await sendData(true);
     } catch (error) {
       console.error(error);
     } finally {

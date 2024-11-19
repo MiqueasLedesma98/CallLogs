@@ -1,40 +1,52 @@
 import axios from 'axios';
-import {LIMIT, URL_CONFIG, URL_FETCH} from './variables';
+import {URL_CONFIG, URL_FETCH} from './variables';
 // @ts-ignore
 import CallLogs from 'react-native-call-log'; // No tiene definición de tipos.
 import DB from './sqlite';
 import {stopTask} from './helpers/tasks';
-import {IConfig} from './interfaces/IConfig';
+import {IConfig, IUser} from './interfaces/IConfig';
+import {IJSON} from './interfaces/IJson';
 
-export const sendData = async (bol = true) => {
+export const sendData = async (bol = false) => {
   try {
     const config = await DB.executeQuery<IConfig>(
       'SELECT * FROM config LIMIT 1;',
     );
-    const logs = await CallLogs.load(bol ? config[0].lim : -1);
-    const data = await DB.executeQuery('SELECT * FROM config LIMIT 1;');
+    const logs = await CallLogs.load(!bol ? config[0].lim : -1);
+    const data = await DB.executeQuery<IUser>('SELECT * FROM device LIMIT 1;');
 
-    if (!data[0] || !config[0]) return stopTask();
-
-    if (URL_FETCH === '/') {
-      console.log('');
-      return;
+    if (!data[0]?.phone || !config[0]) {
+      console.log('No hay datos para enviar');
+      return stopTask();
     }
 
-    const body: IJSON = {logs, phone: data[0].phone};
+    if (!data[0]?.phone) throw new Error('No esta el telefono la ptm');
 
-    await axios.post(URL_FETCH, body);
+    const body: IJSON = {anexo: logs, destino: data[0].phone};
+
+    const fetchConfig = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: URL_FETCH,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: JSON.stringify(body),
+    };
+
+    await axios.request(fetchConfig);
+
     console.log('callLogs enviados');
   } catch (error) {
-    console.error(error);
+    console.log(error);
   }
 };
 
 export const getConfig = async () => {
   try {
     const [response, config] = await Promise.all([
-      URL_CONFIG !== '/' && axios.get<IConfig>(URL_CONFIG),
-      DB.executeQuery('SELECT * FROM config WHERE id=1;'),
+      axios.get<IConfig>(URL_CONFIG),
+      DB.executeQuery<IConfig>('SELECT * FROM config WHERE id=1;'),
     ]);
 
     const {data} = response || {};
@@ -54,7 +66,7 @@ export const getConfig = async () => {
         [data.delay, data.lim],
       );
 
-      const [insertedConfig] = await DB.executeQuery(
+      const [insertedConfig] = await DB.executeQuery<IConfig>(
         'SELECT * FROM config WHERE id=1;',
       );
 
@@ -64,14 +76,14 @@ export const getConfig = async () => {
     if (
       config[0] &&
       data &&
-      (config[0].delay !== data.delay || config[0].limit !== data.lim)
+      (config[0].delay !== data.delay || config[0].lim !== data.lim)
     ) {
       await DB.executeQuery(
         'UPDATE config SET delay = ?, lim = ? WHERE id = 1;',
-        [data.delay, data.lim, config[0].id],
+        [data.delay, data.lim],
       );
 
-      const [updatedConfig] = await DB.executeQuery(
+      const [updatedConfig] = await DB.executeQuery<IConfig>(
         'SELECT * FROM config WHERE id = 1;',
       );
 
@@ -80,7 +92,7 @@ export const getConfig = async () => {
 
     return {lim: 50, delay: 1};
   } catch (error) {
-    console.error('Error en getConfig:', error);
+    console.log('Error en getConfig:', error);
     return {delay: 1, lim: 50};
   }
 };
