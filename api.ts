@@ -12,7 +12,7 @@ export const sendData = async (bol = false) => {
     const config = await DB.executeQuery<IConfig>(
       'SELECT * FROM config LIMIT 1;',
     );
-    const logs = await CallLogs.load(!bol ? config[0].lim : -1);
+    const logs = await CallLogs.load(!bol ? config[0].lim : 300); // Aquí 300 es la cantidad de registros que enviara historico
     const data = await DB.executeQuery<IUser>('SELECT * FROM device LIMIT 1;');
 
     if (!data[0]?.phone || !config[0]) {
@@ -45,7 +45,7 @@ export const sendData = async (bol = false) => {
 export const getConfig = async () => {
   try {
     const [response, config] = await Promise.all([
-      axios.get<IConfig>(URL_CONFIG),
+      URL_CONFIG && axios.get<IConfig>(URL_CONFIG),
       DB.executeQuery<IConfig>('SELECT * FROM config WHERE id=1;'),
     ]);
 
