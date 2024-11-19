@@ -14,6 +14,7 @@ import {handleSubmit} from './services/submit';
 import {sendData} from './api';
 
 DB.createTable();
+// DB.resetDatabase();
 
 export default function App() {
   const [phoneNumber, setPhoneNumber] = useState<string>('');

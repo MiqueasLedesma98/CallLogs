@@ -3,7 +3,8 @@ import SQLite, {
   SQLError,
   Transaction,
 } from 'react-native-sqlite-storage';
-import {DELAY} from './variables';
+import {DELAY, LIMIT} from './variables';
+import {IConfig} from './interfaces/IConfig';
 
 type QueryParams = (string | number)[];
 interface Row {
@@ -13,6 +14,7 @@ interface Row {
 class SQLITE {
   private static dbInstance: SQLite.SQLiteDatabase | null = null;
   private static dbName = 'CallLogApp.db';
+  public config: IConfig | null;
 
   constructor() {
     if (!SQLITE.dbInstance) {
@@ -25,6 +27,8 @@ class SQLITE {
         this.openError,
       );
     }
+
+    this.config = null;
   }
 
   private openSuccess = () => {
@@ -78,22 +82,35 @@ class SQLITE {
   };
 
   public createTable = async (): Promise<void> => {
-    const query = `
-      CREATE TABLE IF NOT EXISTS device (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        phone INTEGER
-      );
-      CREATE TABLE IF NOT EXISTS config (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        time NUMBER
-      );
-      INSERT INTO config (time) values (${DELAY});
-    `;
-
     try {
-      await this.executeQuery(query);
+      await Promise.all([
+        this.executeQuery(`
+          CREATE TABLE IF NOT EXISTS device (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone INTEGER
+          );
+        `),
+        this.executeQuery(`
+          CREATE TABLE IF NOT EXISTS config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            delay INTEGER,
+            lim INTEGER
+          );
+        `),
+      ]);
+
+      // Insertar valores iniciales en 'config'
+      const existingConfig = await this.executeQuery<IConfig>(
+        'SELECT * FROM config WHERE id=1;',
+      );
+      if (existingConfig.length === 0) {
+        await this.executeQuery(
+          `INSERT INTO config (delay, lim) VALUES (?, ?);`,
+          [DELAY, LIMIT],
+        );
+      }
     } catch (error) {
-      console.error('Error al crear la tabla', error);
+      console.error('Error al crear las tablas', error);
     }
   };
 
@@ -109,9 +126,10 @@ class SQLITE {
       );
       CREATE TABLE IF NOT EXISTS config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        time NUMBER
+        delay INTEGER,
+        lim INTEGER
       );
-      INSERT INTO config (time) VALUES (${DELAY});
+      INSERT INTO config (delay, lim) values (${DELAY}, ${LIMIT});
     `;
 
     try {
